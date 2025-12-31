@@ -1,0 +1,156 @@
+<!DOCTYPE html>
+<html lang="he">
+<head>
+<meta charset="UTF-8">
+<title>הדרך ל-6767 - גרסת פרימיום עם טבלת שיאים</title>
+<style>
+body { margin:0; font-family: Arial,sans-serif; background: linear-gradient(135deg,#ffb6c1,#ffe6e6); overflow:hidden; cursor:pointer; transition: background 0.5s;}
+#game {text-align:center;padding-top:30px;position:relative;}
+#amount {font-size:70px; font-weight:bold; color:#d60000; transition: transform 0.2s;}
+#amount.bump { transform:scale(1.3); }
+#goal {font-size:20px; margin-bottom:10px;}
+#bar {width:80%; height:20px; background:#fff; border-radius:20px; margin:0 auto 20px; overflow:hidden;}
+#progress {height:100%; width:0%; background: linear-gradient(90deg,#ff4d6d,#ff0000); transition:width 0.3s;}
+img {width:300px; border-radius:15px; margin-top:20px; transition:transform 0.2s;}
+img.bump {transform:scale(1.05);}
+.heart,.confetti,.flynum {position:absolute;font-size:30px;animation:fly 1s forwards;}
+.confetti {font-size:20px;}
+.flynum {font-size:20px;color:yellow;font-weight:bold;}
+@keyframes fly {0%{opacity:1; transform:translateY(0) scale(1);} 100%{opacity:0; transform:translateY(-120px) scale(1.5);}}
+#winner {display:none; position:fixed; inset:0; background:rgba(0,0,0,0.8); color:white; font-size:50px; justify-content:center; align-items:center; flex-direction:column;}
+#reset {font-size:20px; padding:10px 20px; border-radius:10px; border:none; background-color:#ff4d6d; color:white; cursor:pointer; margin-top:20px;}
+#reset:hover {background-color:#ff1a3c;}
+#leaderboard {margin:20px auto; width:90%; max-width:600px; text-align:center;}
+#leaderboard table {width:100%; border-collapse:collapse;}
+#leaderboard th, #leaderboard td {border:1px solid #fff; padding:5px; color:white;}
+#leaderboard th {background-color:#ff4d6d;}
+#leaderboard td {background-color:rgba(255,0,0,0.5);}
+</style>
+</head>
+<body>
+
+<div id="game">
+  <div id="goal">🎯 מטרה: 6767 ₪</div>
+  <div id="amount">0</div>
+  <div id="bar"><div id="progress"></div></div>
+  <img id="game-img" src="img.png" alt="תמונה של המשחק">
+</div>
+
+<div id="winner">
+  🏆 ניצחת!<br>6767 ₪ 🔥
+  <button id="reset">אתחול</button>
+</div>
+
+<div id="leaderboard">
+  <h2>טבלת שיאים ⏱️</h2>
+  <table>
+    <thead>
+      <tr><th>מקום</th><th>שם</th><th>זמן (שניות)</th></tr>
+    </thead>
+    <tbody id="scores"></tbody>
+  </table>
+</div>
+
+<script>
+let total = Number(localStorage.getItem("total") || 0);
+const target = 6767;
+const amount = document.getElementById("amount");
+const progress = document.getElementById("progress");
+const winner = document.getElementById("winner");
+const gameImg = document.getElementById("game-img");
+const resetBtn = document.getElementById("reset");
+const scoresEl = document.getElementById("scores");
+let startTime = Number(localStorage.getItem("startTime") || 0);
+if(total>0 && startTime===0) startTime = Date.now();
+
+amount.textContent = total;
+
+// פונקציית רקע משתנה
+function updateBackground() {
+  const stage = Math.floor(total / 1000);
+  const colors = ["linear-gradient(135deg,#ffb6c1,#ffe6e6)","linear-gradient(135deg,#ffe6b3,#fff2cc)",
+  "linear-gradient(135deg,#b3ffcc,#ccffe6)","linear-gradient(135deg,#b3d9ff,#ccf0ff)","linear-gradient(135deg,#e6ccff,#f2e6ff)",
+  "linear-gradient(135deg,#ffb3d9,#ffcce6)","linear-gradient(135deg,#ff9999,#ffcccc)"];
+  document.body.style.background = colors[Math.min(stage, colors.length-1)];
+}
+updateBackground();
+
+// פונקציית יצירת אפקט
+function createEffect(className,x,y,content,color=null){
+  const elem=document.createElement("div");
+  elem.className=className;
+  elem.style.left=x+"px";
+  elem.style.top=y+"px";
+  if(content) elem.textContent=content;
+  if(color) elem.style.color=color;
+  document.body.appendChild(elem);
+  setTimeout(()=>elem.remove(),1000);
+}
+
+// קומבו לחיצות
+let lastClick=0;
+let comboMultiplier=1;
+
+// לטעון ולראות שיאים
+function loadScores(){
+  let scores=JSON.parse(localStorage.getItem("scores")||"[]");
+  scores.sort((a,b)=>a.time-b.time);
+  scoresEl.innerHTML="";
+  scores.forEach((s,i)=>{
+    let tr=document.createElement("tr");
+    tr.innerHTML=`<td>${i+1}</td><td>${s.name}</td><td>${s.time}</td>`;
+    scoresEl.appendChild(tr);
+  });
+}
+loadScores();
+
+// לחיצה
+document.body.addEventListener("click",e=>{
+  const now=Date.now();
+  if(startTime===0) startTime=now;
+  comboMultiplier=(now-lastClick<500)?2:1;
+  lastClick=now;
+  if(total>=target) return;
+
+  total+=67*comboMultiplier;
+  if(total>target) total=target;
+  amount.textContent=total;
+  amount.classList.add("bump");
+  gameImg.classList.add("bump");
+  setTimeout(()=>{amount.classList.remove("bump"); gameImg.classList.remove("bump");},200);
+  progress.style.width=(total/target*100)+"%";
+
+  const colors=["#ff4d6d","#ff66a3","#ff99b3","#ff1a3c"];
+  createEffect("heart",e.pageX,e.pageY,"❤️",colors[Math.floor(Math.random()*colors.length)]);
+  createEffect("flynum",e.pageX,e.pageY,"+"+(67*comboMultiplier));
+
+  if(total%1000<67*comboMultiplier){
+    for(let i=0;i<10;i++) createEffect("confetti",e.pageX+Math.random()*50-25,e.pageY+Math.random()*50-25,"🎉");
+  }
+
+  updateBackground();
+  localStorage.setItem("total",total);
+  localStorage.setItem("startTime",startTime);
+
+  if(total===target){
+    let name=prompt("🎉 ניצחת! מה שמך?");
+    if(!name) name="שחקן אנונימי";
+    const elapsed=Math.floor((Date.now()-startTime)/1000);
+    let scores=JSON.parse(localStorage.getItem("scores")||"[]");
+    scores.push({name:name,time:elapsed});
+    localStorage.setItem("scores",JSON.stringify(scores));
+    loadScores();
+    winner.style.display="flex";
+  }
+});
+
+// איפוס
+resetBtn.addEventListener("click",()=>{
+  total=0; amount.textContent=total;
+  progress.style.width="0%"; winner.style.display="none";
+  startTime=0; localStorage.setItem("total",total); localStorage.setItem("startTime",0);
+  updateBackground();
+});
+</script>
+</body>
+</html>
